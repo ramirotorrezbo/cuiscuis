@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Kids - Bloques de Frases</title>
+    <style>
+        :root { --neon: #00ff88; --bg: #000; --card: #111; --text: #fff; --blue: #00ccff; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; overflow-x: hidden; }
+        
+        /* Menú y Configuración */
+        .admin-menu { width: 100%; max-width: 600px; background: var(--card); border-bottom: 1px solid #333; z-index: 100; }
+        .admin-header { padding: 10px; text-align: center; cursor: pointer; color: #666; font-size: 14px; letter-spacing: 1px; }
+        .admin-content { display: none; padding: 15px; text-align: center; border-top: 1px solid #222; max-height: 70vh; overflow-y: auto; }
+        .admin-content.active { display: block; }
+        input { background: #222; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; margin: 5px; width: 85%; font-size: 16px; }
+        input[type="file"] { padding: 8px; cursor: pointer; }
+
+        /* Tabs de navegación */
+        .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .admin-tab { background: #222; border: 1px solid #444; color: #888; padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 12px; transition: 0.3s; }
+        .admin-tab.active { background: var(--neon); color: #000; border-color: var(--neon); font-weight: bold; }
+
+        /* HUD: Vidas, Progreso, Cronómetro y Récord */
+        .hud { width: 92%; max-width: 600px; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 20px; flex-wrap: wrap; gap: 10px; }
+        .hearts { color: #ff4444; font-size: 28px; letter-spacing: 3px; }
+        .stats-group { display: flex; gap: 15px; align-items: center; }
+        .timer-display { color: var(--blue); font-family: monospace; font-size: 20px; font-weight: bold; }
+        .record-display { color: #ffaa00; font-family: monospace; font-size: 16px; font-weight: bold; }
+        .progress-container { width: 100%; height: 14px; background: #222; margin-top: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
+        #progress-bar { width: 0%; height: 100%; background: var(--neon); transition: 0.5s; }
+
+        /* Selector de Bloques */
+        .block-selector { display: flex; gap: 8px; margin: 15px 0; flex-wrap: wrap; justify-content: center; }
+        .block-btn { background: #222; border: 1px solid #444; color: #888; padding: 10px 16px; border-radius: 25px; cursor: pointer; font-size: 14px; transition: 0.3s; position: relative; }
+        .block-btn.active { background: var(--neon); color: #000; border-color: var(--neon); font-weight: bold; }
+        .block-count { font-size: 10px; position: absolute; top: -5px; right: 5px; background: #ff4444; padding: 2px 5px; border-radius: 10px; }
+
+        /* Selector de Modos */
+        .mode-selector { display: flex; gap: 8px; margin: 15px 0; flex-wrap: wrap; justify-content: center; }
+        .mode-btn { background: #222; border: 1px solid #444; color: #888; padding: 10px 16px; border-radius: 25px; cursor: pointer; font-size: 14px; transition: 0.3s; }
+        .mode-btn.active { background: var(--neon); color: #000; border-color: var(--neon); font-weight: bold; }
+
+        /* Pantalla Principal */
+        .card { background: var(--card); padding: 30px; border-radius: 35px; width: 90%; max-width: 600px; text-align: center; border: 1px solid #333; position: relative; box-shadow: 0 20px 45px rgba(0,0,0,0.9); }
+        .display-area { min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 25px; }
+        .main-text { font-size: 65px; font-weight: bold; color: var(--neon); line-height: 1.1; margin: 15px 0; word-wrap: break-word; }
+        .listening-icon { font-size: 100px; color: #444; }
+
+        /* Contenedores de Juego */
+        .options-grid { display: grid; gap: 15px; width: 100%; }
+        .scramble-area { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 20px; }
+        .word-bubble { background: #1a1a1a; border: 2px solid #444; padding: 15px 25px; border-radius: 20px; cursor: pointer; font-size: 26px; transition: 0.2s; color: #fff; }
+        .word-bubble:active { transform: scale(0.9); background: var(--neon); color: #000; }
+        
+        /* Botones Acción */
+        .btn-action { background: var(--neon); color: #000; border: none; padding: 18px 35px; border-radius: 60px; font-weight: bold; cursor: pointer; font-size: 18px; margin: 10px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,255,136,0.3); }
+        .btn-small { background: var(--neon); color: #000; border: none; padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 12px; margin: 5px; transition: 0.3s; }
+        .btn-small.danger { background: #ff4444; color: #fff; }
+        .opt-btn { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 22px; font-size: 26px; border-radius: 20px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+
+        /* Audio Recorder */
+        .audio-section { margin: 15px 0; padding: 15px; background: #1a1a1a; border-radius: 15px; }
+        .audio-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .audio-btn { background: #00ccff; color: #000; border: none; padding: 10px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; }
+        .audio-btn:hover { background: #00ff88; }
+        .audio-btn.recording { background: #ff4444; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .audio-status { color: #00ccff; font-size: 12px; margin-top: 10px; }
+
+        /* Lista de Bloques */
+        .blocks-list { background: #1a1a1a; padding: 15px; border-radius: 15px; margin: 15px 0; max-height: 300px; overflow-y: auto; }
+        .block-item { background: #222; padding: 10px; margin: 8px 0; border-radius: 10px; border-left: 3px solid var(--neon); display: flex; justify-content: space-between; align-items: center; }
+        .block-info { text-align: left; flex: 1; }
+        .block-name { color: var(--neon); font-weight: bold; font-size: 14px; }
+        .block-detail { color: #888; font-size: 12px; margin-top: 3px; }
+
+        /* Content tabs */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Info messages */
+        .info-box { background: #1a1a1a; padding: 10px; border-radius: 10px; margin: 10px 0; color: #00ccff; font-size: 12px; border-left: 3px solid #00ccff; }
+    </style>
+</head>
+<body>
+
+    <div class="admin-menu">
+        <div class="admin-header" onclick="toggleMenu()">⚙️ AJUSTES Y LISTA DE FRASES</div>
+        <div class="admin-content" id="menu-box">
+            
+            <!-- TABS -->
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchTab('add-phrase')">➕ NUEVA FRASE</button>
+                <button class="admin-tab" onclick="switchTab('manage-blocks')">📁 GESTIONAR BLOQUES</button>
+                <button class="admin-tab" onclick="switchTab('view-phrases')">📋 VER FRASES</button>
+            </div>
+
+            <!-- TAB 1: AÑADIR FRASE -->
+            <div id="add-phrase" class="tab-content active">
+                <h3 style="color: var(--neon); margin-top: 0;">NUEVA FRASE</h3>
+                
+                <div style="margin: 10px 0;">
+                    <label style="font-size: 12px; color: #888;">Bloque:</label>
+                    <select id="block-select" style="background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; width: 87%; margin: 5px 0; font-size: 14px;"></select>
+                </div>
+
+                <input type="text" id="new-en" placeholder="Frase en Inglés">
+                <input type="text" id="new-es" placeholder="Traducción en Español">
+                
+                <div class="audio-section">
+                    <div style="font-size: 12px; color: #888; margin-bottom: 10px;">AUDIO PERSONALIZADO:</div>
+                    
+                    <div class="audio-buttons">
+                        <button class="audio-btn" onclick="startRecording()">🎤 GRABAR</button>
+                        <button class="audio-btn" onclick="stopRecording()" id="stop-btn" style="display:none;">⏹️ DETENER</button>
+                    </div>
+                    <div class="audio-status" id="audio-status"></div>
+                    <div id="recorded-audio"></div>
+                    
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                        <div style="font-size: 12px; color: #888; margin-bottom: 10px;">O SUBIR ARCHIVO:</div>
+                        <input type="file" id="audio-file" accept="audio/*" onchange="handleAudioUpload(event)">
+                        <div id="audio-name" style="font-size: 12px; color: #00ccff; margin-top: 5px;"></div>
+                    </div>
+                </div>
+
+                <br>
+                <button class="btn-action" style="padding: 10px 20px;" onclick="addPhrase()">AÑADIR FRASE</button>
+            </div>
+
+            <!-- TAB 2: GESTIONAR BLOQUES -->
+            <div id="manage-blocks" class="tab-content">
+                <h3 style="color: var(--neon); margin-top: 0;">GESTIONAR BLOQUES</h3>
+                
+                <div class="info-box">
+                Cada bloque puede tener hasta 50 frases. Crea diferentes bloques para diferentes temas.
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label style="font-size: 12px; color: #888;">Nombre del Nuevo Bloque:</label>
+                    <input type="text" id="new-block-name" placeholder="Ej: Saludos, Comida, Animales...">
+                    <button class="btn-action" style="padding: 10px 20px; margin-top: 10px;" onclick="createNewBlock()">CREAR BLOQUE</button>
+                </div>
+
+                <h4 style="color: #888; margin-top: 20px;">Bloques Existentes:</h4>
+                <div class="blocks-list" id="blocks-container">
+                    <div class="info-box">Cargando bloques...</div>
+                </div>
+
+                <button class="btn-action" style="background:#ff4444; color:#fff; padding: 10px 20px; margin-top: 15px;" onclick="deleteAllBlocks()">🗑️ BORRAR TODOS LOS BLOQUES</button>
+            </div>
+
+            <!-- TAB 3: VER FRASES -->
+            <div id="view-phrases" class="tab-content">
+                <h3 style="color: var(--neon); margin-top: 0;">VER FRASES DEL BLOQUE</h3>
+                
+                <div style="margin: 10px 0;">
+                    <label style="font-size: 12px; color: #888;">Selecciona Bloque:</label>
+                    <select id="block-select-view" style="background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; width: 87%; margin: 5px 0; font-size: 14px;" onchange="viewBlockPhrases()"></select>
+                </div>
+
+                <div class="blocks-list" id="phrases-container">
+                    <div class="info-box">Selecciona un bloque para ver sus frases</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="hud">
+        <div class="hearts" id="hearts-display">❤️❤️❤️</div>
+        <div class="stats-group">
+            <div class="record-display" id="best-time">🥇 RÉCORD: --:--</div>
+            <div class="timer-display" id="timer">00:00</div>
+        </div>
+        <div class="progress-container"><div id="progress-bar"></div></div>
+    </div>
+
+    <div class="block-selector" id="block-selector-main"></div>
+
+    <div class="mode-selector">
+        <button class="mode-btn active" onclick="changeMode('classic', this)">CLÁSICO</button>
+        <button class="mode-btn" onclick="changeMode('listening', this)">ESCUCHA</button>
+        <button class="mode-btn" onclick="changeMode('scramble', this)">ORDENAR</button>
+        <button class="mode-btn" onclick="changeMode('flashcards', this)">TARJETAS</button>
+    </div>
+
+    <div class="card">
+        <div class="display-area" id="game-display"></div>
+        <div id="action-area" class="options-grid"></div>
+        <button class="btn-action" id="audio-main" onclick="speak()" style="margin-top:20px;">🔊 ESCUCHAR</button>
+    </div>
+
+<script>
+    const DEFAULT_BLOCK = 'Frases Básicas';
+
+    const defaultPhrases = [
+        {en: "No thank you", es: "No, gracias"},
+        {en: "Call a doctor", es: "Llame a un médico"},
+        {en: "It's too cold", es: "Hace demasiado frío"},
+        {en: "She has a cat", es: "Ella tiene un gato"},
+        {en: "I need a taxi", es: "Necesito un taxi"},
+        {en: "I'm not tired", es: "No estoy cansado"},
+        {en: "You were late", es: "Llegaste tarde"},
+        {en: "I'm not angry", es: "No estoy enojado"},
+        {en: "It isn't mine", es: "No es mío"},
+        {en: "Where were we?", es: "¿En qué estábamos?"},
+        {en: "I'd like this", es: "Me gustaría esto"},
+        {en: "See you later", es: "Hasta luego"},
+        {en: "We are friends", es: "Somos amigos"},
+        {en: "I have no idea", es: "No tengo idea"},
+        {en: "He's not ready", es: "Él no está listo"},
+        {en: "He's very busy", es: "Él está muy ocupado"},
+        {en: "I will be late", es: "Llegaré tarde"},
+        {en: "Can I join you?", es: "¿Puedo unirme?"},
+        {en: "It's very cold", es: "Hace mucho frío"},
+        {en: "We aren't sure", es: "No estamos seguros"},
+        {en: "It's 3:00", es: "Son las tres"},
+        {en: "Are you hungry?", es: "¿Tienes hambre?"},
+        {en: "It's our house", es: "Es nuestra casa"},
+        {en: "They were late", es: "Ellos llegaron tarde"},
+        {en: "I'm very happy", es: "Estoy muy feliz"},
+        {en: "She can't cook", es: "Ella no sabe cocinar"},
+        {en: "I didn't do it", es: "Yo no lo hice"},
+        {en: "It's important", es: "Es importante"},
+        {en: "I'm ... years old", es: "Tengo ... años"},
+        {en: "It isn't right", es: "No está bien / No es justo"},
+        {en: "She's his wife", es: "Ella es su esposa"},
+        {en: "How's your day?", es: "¿Cómo va tu día?"},
+        {en: "It's hot today", es: "Hace calor hoy"},
+        {en: "Can I help you?", es: "¿Puedo ayudarte?"},
+        {en: "Good afternoon", es: "Buenas tardes"},
+        {en: "It's beautiful", es: "Es hermoso"},
+        {en: "You were right", es: "Tenías razón"},
+        {en: "His car is new", es: "Su coche es nuevo"},
+        {en: "This is my car", es: "Este es mi coche"},
+        {en: "I'm very tired", es: "Estoy muy cansado"},
+        {en: "Leave me alone", es: "Déjame en paz"},
+        {en: "I'm in a hurry", es: "Tengo prisa"},
+        {en: "It's difficult", es: "Es difícil"},
+        {en: "You're welcome", es: "De nada"},
+        {en: "She's very kind", es: "Ella es muy amable"},
+        {en: "I need to sleep", es: "Necesito dormir"},
+        {en: "Don't forget it", es: "No lo olvides"},
+        {en: "We're going out", es: "Vamos a salir"},
+        {en: "It's quite cold", es: "Hace bastante frío"},
+        {en: "What did he say?", es: "¿Qué dijo él?"},
+        {en: "She's not happy", es: "Ella no está feliz"}
+    ];
+
+    // Sistema de almacenamiento de bloques
+    let blocks = loadBlocks();
+    let currentBlock = DEFAULT_BLOCK;
+    let phrases = blocks[currentBlock] || defaultPhrases;
+    
+    let current = 0;
+    let mode = 'classic';
+    let lives = 3;
+    let timerInterval;
+    let seconds = 0;
+    let gameActive = false;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Variables para grabar audio
+    let mediaRecorder;
+    let audioChunks = [];
+    let currentAudioData = null;
+
+    // ===== FUNCIONES DE BLOQUES =====
+
+    function loadBlocks() {
+        let stored = localStorage.getItem('englishKids_blocks');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        return { [DEFAULT_BLOCK]: defaultPhrases };
+    }
+
+    function saveBlocks() {
+        localStorage.setItem('englishKids_blocks', JSON.stringify(blocks));
+    }
+
+    function createNewBlock() {
+        const blockName = document.getElementById('new-block-name').value.trim();
+        
+        if (!blockName) {
+            alert('Por favor, ingresa un nombre para el bloque');
+            return;
+        }
+        
+        if (blocks[blockName]) {
+            alert('Este bloque ya existe');
+            return;
+        }
+        
+        blocks[blockName] = [];
+        saveBlocks();
+        document.getElementById('new-block-name').value = '';
+        
+        updateBlockSelectors();
+        renderBlocksList();
+        alert(`✅ Bloque "${blockName}" creado correctamente`);
+    }
+
+    function deleteBlock(blockName) {
+        if (confirm(`¿Estás seguro de que quieres eliminar el bloque "${blockName}"?\n\n⚠️ Se perderán todas sus frases`)) {
+            delete blocks[blockName];
+            saveBlocks();
+            
+            if (currentBlock === blockName) {
+                currentBlock = Object.keys(blocks)[0] || DEFAULT_BLOCK;
+                if (!blocks[currentBlock]) {
+                    blocks[currentBlock] = [];
+                    saveBlocks();
+                }
+                phrases = blocks[currentBlock];
+                current = 0;
+                renderGame();
+            }
+            
+            updateBlockSelectors();
+            renderBlocksList();
+        }
+    }
+
+    function deleteAllBlocks() {
+        if (confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsto eliminará TODOS los bloques y frases.\n\nEsta acción no se puede deshacer.")) {
+            if (confirm("Escriba 'SI' para confirmar la eliminación total")) {
+                blocks = { [DEFAULT_BLOCK]: [] };
+                currentBlock = DEFAULT_BLOCK;
+                phrases = blocks[currentBlock];
+                current = 0;
+                saveBlocks();
+                updateBlockSelectors();
+                renderBlocksList();
+                renderGame();
+                alert('✅ Todos los bloques han sido eliminados');
+            }
+        }
+    }
+
+    function switchBlock(blockName) {
+        currentBlock = blockName;
+        phrases = blocks[blockName] || [];
+        current = 0;
+        lives = 3;
+        stopTimer();
+        document.getElementById('timer').innerText = "00:00";
+        updateBlockSelectors();
+        renderGame();
+    }
+
+    function updateBlockSelectors() {
+        const blockNames = Object.keys(blocks);
+        
+        // Actualizar selector principal
+        const mainSelector = document.getElementById('block-selector-main');
+        mainSelector.innerHTML = '';
+        
+        blockNames.forEach(name => {
+            const btn = document.createElement('button');
+            btn.className = 'block-btn';
+            if (name === currentBlock) btn.classList.add('active');
+            
+            const count = (blocks[name] || []).length;
+            btn.innerHTML = `${name} <span class="block-count">${count}</span>`;
+            btn.onclick = () => switchBlock(name);
+            mainSelector.appendChild(btn);
+        });
+        
+        // Actualizar select en tab de añadir frase
+        const addSelect = document.getElementById('block-select');
+        addSelect.innerHTML = '';
+        blockNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === currentBlock) option.selected = true;
+            addSelect.appendChild(option);
+        });
+        
+        // Actualizar select en tab de ver frases
+        const viewSelect = document.getElementById('block-select-view');
+        viewSelect.innerHTML = '';
+        blockNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            viewSelect.appendChild(option);
+        });
+    }
+
+    function renderBlocksList() {
+        const container = document.getElementById('blocks-container');
+        const blockNames = Object.keys(blocks);
+        
+        if (blockNames.length === 0) {
+            container.innerHTML = '<div class="info-box">No hay bloques. Crea uno para empezar.</div>';
+            return;
+        }
+        
+        container.innerHTML = blockNames.map(name => `
+            <div class="block-item">
+                <div class="block-info">
+                    <div class="block-name">${name}</div>
+                    <div class="block-detail">${(blocks[name] || []).length} frases</div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-small" onclick="switchTab('view-phrases'); document.getElementById('block-select-view').value='${name}'; viewBlockPhrases();">Ver</button>
+                    <button class="btn-small danger" onclick="deleteBlock('${name}')">Borrar</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function viewBlockPhrases() {
+        const blockName = document.getElementById('block-select-view').value;
+        const phrasesInBlock = blocks[blockName] || [];
+        const container = document.getElementById('phrases-container');
+        
+        if (phrasesInBlock.length === 0) {
+            container.innerHTML = '<div class="info-box">Este bloque está vacío. Añade frases desde la pestaña "Nueva Frase".</div>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div style="color: #00ccff; margin-bottom: 10px;">Total: ${phrasesInBlock.length} frases</div>
+            ${phrasesInBlock.map((phrase, idx) => `
+                <div style="background: #222; padding: 10px; margin: 5px 0; border-radius: 8px; text-align: left; border-left: 3px solid ${phrase.audio ? '#00ff88' : '#666'};">
+                    <div style="color: var(--neon); font-weight: bold;">${idx + 1}. ${phrase.en}</div>
+                    <div style="color: #ccc; font-size: 12px; margin-top: 3px;">${phrase.es}</div>
+                    ${phrase.audio ? '<div style="color: #00ff88; font-size: 11px; margin-top: 3px;">🎵 Con audio personalizado</div>' : ''}
+                </div>
+            `).join('')}
+        `;
+    }
+
+    // ===== FUNCIONES DE JUEGO =====
+
+    function formatTime(s) {
+        const mins = Math.floor(s / 60).toString().padStart(2, '0');
+        const secs = (s % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+    }
+
+    function updateBestTimeDisplay() {
+        const key = `bestTime_${mode}_${currentBlock}`;
+        const best = localStorage.getItem(key);
+        document.getElementById('best-time').innerText = best ? `🥇 RÉCORD: ${formatTime(best)}` : `🥇 RÉCORD: --:--`;
+    }
+
+    function renderGame() {
+        if (lives <= 0) { gameOver(); return; }
+        if (current >= phrases.length) { victory(); return; }
+        if (!gameActive) startTimer();
+
+        const item = phrases[current];
+        const display = document.getElementById('game-display');
+        const actions = document.getElementById('action-area');
+        
+        display.innerHTML = '';
+        actions.innerHTML = '';
+        updateHUD();
+
+        if (mode === 'classic') {
+            display.innerHTML = `<div class="main-text">${item.en}</div>`;
+            renderOptions(item.es);
+        } else if (mode === 'listening') {
+            display.innerHTML = `<div class="listening-icon">👂❓</div>`;
+            renderOptions(item.es);
+        } else if (mode === 'scramble') {
+            display.innerHTML = `<div style="color:#888; font-size:24px; margin-bottom:10px;">${item.es}</div><div class="main-text" id="scramble-result" style="font-size:45px; border-bottom: 2px dashed #333; min-width: 80%; padding-bottom:10px;">...</div>`;
+            renderScramble(item.en);
+        } else if (mode === 'flashcards') {
+            display.innerHTML = `<div class="main-text" id="card-text">${item.en}</div>`;
+            actions.innerHTML = `<button class="btn-action" onclick="flipCard()">VOLTEAR 🔄</button><button class="btn-action" style="background:#444; color:#fff" onclick="nextQuestion()">SIGUIENTE ✅</button>`;
+        }
+    }
+
+    function renderOptions(correct) {
+        let choices = [correct];
+        let pool = phrases.map(p => p.es).filter(es => es !== correct);
+        while(choices.length < 3 && pool.length > 0) {
+            let rand = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+            choices.push(rand);
+        }
+        choices.sort(() => Math.random() - 0.5).forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt === correct, btn);
+            document.getElementById('action-area').appendChild(btn);
+        });
+    }
+
+    function renderScramble(sentence) {
+        let scrambleInput = [];
+        let words = sentence.split(' ');
+        let shuffled = [...words].sort(() => Math.random() - 0.5);
+        const container = document.createElement('div');
+        container.className = 'scramble-area';
+        shuffled.forEach(word => {
+            const bubble = document.createElement('div');
+            bubble.className = 'word-bubble';
+            bubble.innerText = word;
+            bubble.onclick = () => {
+                scrambleInput.push(word);
+                document.getElementById('scramble-result').innerText = scrambleInput.join(' ');
+                bubble.style.opacity = '0.2';
+                bubble.style.pointerEvents = 'none';
+                if(scrambleInput.length === words.length) {
+                    checkAnswer(scrambleInput.join(' ') === sentence);
+                }
+            };
+            container.appendChild(bubble);
+        });
+        document.getElementById('action-area').appendChild(container);
+    }
+
+    function checkAnswer(isCorrect, btn = null) {
+        if (isCorrect) {
+            playTone(880, 0.2);
+            if(btn) { btn.style.backgroundColor = '#00ff88'; btn.style.color = '#000'; }
+            setTimeout(nextQuestion, 600);
+        } else {
+            lives--; playTone(150, 0.4);
+            if(btn) { btn.style.backgroundColor = '#ff4444'; btn.style.borderColor = '#ff4444'; }
+            if(lives <= 0) gameOver();
+            else updateHUD();
+        }
+    }
+
+    function nextQuestion() { current++; renderGame(); if(mode !== 'flashcards') speak(); }
+
+    function updateHUD() {
+        document.getElementById('hearts-display').innerText = '❤️'.repeat(lives);
+        document.getElementById('progress-bar').style.width = (current / phrases.length * 100) + '%';
+        updateBestTimeDisplay();
+    }
+
+    function startTimer() {
+        if (gameActive) return;
+        gameActive = true;
+        seconds = 0;
+        timerInterval = setInterval(() => {
+            seconds++;
+            document.getElementById('timer').innerText = formatTime(seconds);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        gameActive = false;
+    }
+
+    function changeMode(newMode, btn) {
+        mode = newMode;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        current = 0; lives = 3; 
+        stopTimer();
+        document.getElementById('timer').innerText = "00:00";
+        renderGame();
+    }
+
+    function speak() {
+        const item = phrases[current];
+        
+        if (item.audio) {
+            const audio = new Audio(item.audio);
+            audio.play();
+        } else {
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(item.en)}&tl=en&client=tw-ob`;
+            new Audio(url).play();
+        }
+    }
+
+    function flipCard() {
+        const txt = document.getElementById('card-text');
+        txt.innerText = (txt.innerText === phrases[current].en) ? phrases[current].es : phrases[current].en;
+        txt.style.color = (txt.style.color === 'rgb(0, 255, 136)') ? '#fff' : '#00ff88';
+    }
+
+    function playTone(freq, duration) {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // ===== FUNCIONES DE AUDIO PERSONALIZADO =====
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentAudioData = e.target.result;
+                    displayRecordedAudio();
+                };
+                reader.readAsDataURL(audioBlob);
+            };
+            
+            mediaRecorder.start();
+            document.getElementById('stop-btn').style.display = 'inline-block';
+            document.querySelector('[onclick="startRecording()"]').style.display = 'none';
+            document.getElementById('audio-status').innerText = '🔴 GRABANDO...';
+        } catch (err) {
+            alert('Error al acceder al micrófono: ' + err.message);
+        }
+    }
+
+    function stopRecording() {
+        mediaRecorder.stop();
+        document.getElementById('stop-btn').style.display = 'none';
+        document.querySelector('[onclick="startRecording()"]').style.display = 'inline-block';
+        document.getElementById('audio-status').innerText = '✅ Audio grabado';
+    }
+
+    function displayRecordedAudio() {
+        const container = document.getElementById('recorded-audio');
+        container.innerHTML = `
+            <div style="margin-top: 10px;">
+                <audio controls style="width: 100%; max-width: 250px; margin: 10px 0;">
+                    <source src="${currentAudioData}" type="audio/wav">
+                </audio>
+                <br>
+                <button class="audio-btn" onclick="clearRecording()">❌ BORRAR GRABACIÓN</button>
+            </div>
+        `;
+    }
+
+    function clearRecording() {
+        currentAudioData = null;
+        document.getElementById('recorded-audio').innerHTML = '';
+        document.getElementById('audio-status').innerText = '';
+        document.getElementById('audio-file').value = '';
+    }
+
+    function handleAudioUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentAudioData = e.target.result;
+            document.getElementById('audio-name').innerText = `✅ Archivo: ${file.name}`;
+            document.getElementById('recorded-audio').innerHTML = `
+                <div style="margin-top: 10px;">
+                    <audio controls style="width: 100%; max-width: 250px; margin: 10px 0;">
+                        <source src="${currentAudioData}" type="${file.type}">
+                    </audio>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ===== AÑADIR FRASE CON AUDIO =====
+
+    function addPhrase() {
+        const en = document.getElementById('new-en').value.trim();
+        const es = document.getElementById('new-es').value.trim();
+        const blockName = document.getElementById('block-select').value;
+        
+        if (!en || !es) {
+            alert('Por favor completa ambos campos');
+            return;
+        }
+        
+        if (!blocks[blockName]) {
+            blocks[blockName] = [];
+        }
+        
+        if (blocks[blockName].length >= 50) {
+            alert(`⚠️ Este bloque ya tiene 50 frases (máximo)`);
+            return;
+        }
+        
+        const newPhrase = { en, es };
+        
+        if (currentAudioData) {
+            newPhrase.audio = currentAudioData;
+        }
+        
+        blocks[blockName].push(newPhrase);
+        saveBlocks();
+        
+        // Actualizar frases actuales si es el bloque actual
+        if (blockName === currentBlock) {
+            phrases = blocks[blockName];
+        }
+        
+        // Limpiar formulario
+        document.getElementById('new-en').value = '';
+        document.getElementById('new-es').value = '';
+        clearRecording();
+        document.getElementById('audio-name').innerText = '';
+        
+        updateBlockSelectors();
+        renderBlocksList();
+        
+        alert(`✅ Frase añadida al bloque "${blockName}"`);
+    }
+
+    function toggleMenu() { document.getElementById('menu-box').classList.toggle('active'); }
+    
+    function switchTab(tabName) {
+        // Ocultar todos los tabs
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Mostrar el tab seleccionado
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
+        
+        // Actualizar listas
+        if (tabName === 'manage-blocks') {
+            renderBlocksList();
+        } else if (tabName === 'view-phrases') {
+            renderBlocksList();
+        }
+    }
+
+    function gameOver() {
+        stopTimer();
+        document.querySelector('.card').innerHTML = `<h1 style="font-size:40px;">GAME OVER 💔</h1><p>¡Vuelve a intentarlo!</p><button class="btn-action" onclick="location.reload()">REINTENTAR</button>`;
+    }
+
+    function victory() {
+        stopTimer();
+        const key = `bestTime_${mode}_${currentBlock}`;
+        const best = localStorage.getItem(key);
+        let msg = "";
+        
+        if (!best || seconds < parseInt(best)) {
+            localStorage.setItem(key, seconds);
+            msg = `<div style="color:var(--neon); font-size:24px; margin:15px;">🏆 ¡NUEVO RÉCORD! 🏆</div>`;
+        }
+
+        document.querySelector('.card').innerHTML = `
+            <h1 style="color:var(--neon); font-size:40px;">¡INCREÍBLE!</h1>
+            ${msg}
+            <p>Completaste las ${phrases.length} frases en <b>${formatTime(seconds)}</b>.</p>
+            <button class="btn-action" onclick="location.reload()">JUGAR OTRA VEZ</button>
+        `;
+    }
+
+    // Inicializar
+    updateBlockSelectors();
+    renderBlocksList();
+    renderGame();
+</script>
+</body>
+</html>
